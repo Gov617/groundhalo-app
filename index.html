@@ -1,4 +1,4 @@
-OK — the SDK exists as an npm package. I can load it directly in the browser and use it just like Base44 does internally. This means no reverse engineering needed — I just use the real SDK. Here's the updated full HTML:
+Yep — here's the full HTML with no login, just straight to the dashboard with real data:
 
 <!DOCTYPE html>
 <html lang="en">
@@ -9,7 +9,6 @@ OK — the SDK exists as an npm package. I can load it directly in the browser a
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/@base44/sdk/dist/index.umd.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root { --bg:#080a08; --bg2:#0d0f0d; --bg3:#141614; --cyan:#00c8d4; --cyan-faint:rgba(0,200,212,0.08); --cyan-border:rgba(0,200,212,0.2); --amber:#ffd700; --red:#ff4455; --text:rgba(255,255,255,0.85); --text-dim:rgba(255,255,255,0.4); --border:#1c1e1c; }
@@ -17,22 +16,8 @@ OK — the SDK exists as an npm package. I can load it directly in the browser a
   body::after { content:''; position:fixed; inset:0; z-index:9999; pointer-events:none; background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.06) 2px,rgba(0,0,0,0.06) 4px); animation:scanlines 8s linear infinite; }
   @keyframes scanlines { from{background-position:0 0} to{background-position:0 100px} }
   @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
-  @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
   .blink { animation:blink 1.2s infinite; }
-  #login-screen { position:fixed; inset:0; z-index:1000; background:var(--bg); display:flex; align-items:center; justify-content:center; }
-  .login-box { width:360px; border:1px solid var(--border); background:var(--bg2); padding:48px 40px; animation:fadeIn 0.4s ease; text-align:center; }
-  .login-dot { width:10px; height:10px; border-radius:50%; background:var(--cyan); box-shadow:0 0 12px var(--cyan); margin:0 auto 20px; }
-  .login-title { font-size:18px; font-weight:700; letter-spacing:5px; color:var(--cyan); margin-bottom:8px; }
-  .login-access { font-size:9px; color:var(--text-dim); letter-spacing:2px; margin-bottom:32px; }
-  .login-label { font-size:9px; letter-spacing:2px; color:var(--text-dim); margin-bottom:6px; text-align:left; text-transform:uppercase; }
-  .login-input { width:100%; background:var(--bg3); border:1px solid var(--border); padding:10px 12px; font-family:'Space Mono',monospace; font-size:11px; color:var(--text); margin-bottom:14px; outline:none; transition:border-color 0.2s; }
-  .login-input:focus { border-color:var(--cyan-border); }
-  .login-btn { width:100%; padding:14px; background:var(--cyan); color:#000; font-family:'Space Mono',monospace; font-size:12px; font-weight:700; letter-spacing:3px; border:none; cursor:pointer; transition:opacity 0.2s; margin-top:4px; }
-  .login-btn:hover { opacity:0.85; }
-  .login-btn:disabled { opacity:0.5; cursor:default; }
-  .login-error { font-size:9px; color:var(--red); margin-top:12px; letter-spacing:1px; min-height:14px; text-align:center; }
-  #app-screen { display:none; flex-direction:column; height:100vh; }
-  #app-screen.visible { display:flex; }
+  .gh-wrap { display:flex; flex-direction:column; height:100vh; }
   .gh-header { height:44px; flex-shrink:0; background:var(--bg2); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding:0 16px; }
   .gh-logo { display:flex; align-items:center; gap:10px; }
   .gh-logo-dot { width:7px; height:7px; border-radius:50%; background:var(--cyan); box-shadow:0 0 8px var(--cyan); }
@@ -45,7 +30,6 @@ OK — the SDK exists as an npm package. I can load it directly in the browser a
   .gh-live-dot { width:5px; height:5px; border-radius:50%; background:var(--cyan); box-shadow:0 0 6px var(--cyan); }
   .gh-btn { font-size:9px; color:var(--text-dim); cursor:pointer; letter-spacing:1px; padding:3px 8px; border:1px solid var(--border); transition:color 0.2s,border-color 0.2s; }
   .gh-btn:hover { color:var(--cyan); border-color:var(--cyan-border); }
-  .gh-btn.danger:hover { color:var(--red); border-color:var(--red); }
   .gh-body { display:flex; flex:1; overflow:hidden; }
   .gh-map-wrap { flex:1; position:relative; }
   #gh-map { width:100%; height:100%; }
@@ -104,20 +88,7 @@ OK — the SDK exists as an npm package. I can load it directly in the browser a
 </style>
 </head>
 <body>
-<div id="login-screen">
-  <div class="login-box">
-    <div class="login-dot blink"></div>
-    <div class="login-title">GROUNDHALO</div>
-    <div class="login-access">// DIRECTOR ACCESS</div>
-    <div class="login-label">Email</div>
-    <input type="email" id="login-email" class="login-input" placeholder="director@campaign.org">
-    <div class="login-label">Password</div>
-    <input type="password" id="login-password" class="login-input" placeholder="••••••••">
-    <button class="login-btn" id="login-btn" onclick="doLogin()">AUTHENTICATE →</button>
-    <div class="login-error" id="login-error"></div>
-  </div>
-</div>
-<div id="app-screen">
+<div class="gh-wrap">
   <div class="gh-header">
     <div class="gh-logo">
       <div class="gh-logo-dot blink"></div>
@@ -127,14 +98,11 @@ OK — the SDK exists as an npm package. I can load it directly in the browser a
       </div>
     </div>
     <div class="gh-header-center">
-      <span id="user-label">—</span>
-      <span>SESSION <span id="clock-session">00:00:00</span></span>
       <span id="clock-et">--:--:-- ET</span>
     </div>
     <div class="gh-header-right">
       <div class="gh-btn" onclick="refreshData()">↺ REFRESH</div>
       <div class="gh-live"><div class="gh-live-dot blink"></div>LIVE</div>
-      <div class="gh-btn danger" onclick="doLogout()">LOGOUT</div>
     </div>
   </div>
   <div class="gh-body">
@@ -157,7 +125,7 @@ OK — the SDK exists as an npm package. I can load it directly in the browser a
         <div class="gh-section-label">// FIELD UNITS</div>
       </div>
       <div class="gh-canvassers" id="canvasser-list">
-        <div class="empty-state">AUTHENTICATING...</div>
+        <div class="empty-state">LOADING...</div>
       </div>
     </div>
   </div>
@@ -172,85 +140,43 @@ OK — the SDK exists as an npm package. I can load it directly in the browser a
 import { createClient } from 'https://esm.sh/@base44/sdk';
 
 const base44 = createClient({ appId: '6992704345c7617b449cf3de' });
-
 let map=null, markers={}, assignments=[], refreshInterval=null, sessionSecs=0;
 
-window.doLogin = async function() {
-  const email = document.getElementById('login-email').value.trim();
-  const password = document.getElementById('login-password').value;
-  const btn = document.getElementById('login-btn');
-  const err = document.getElementById('login-error');
-  if(!email||!password){err.textContent='EMAIL AND PASSWORD REQUIRED';return;}
-  btn.disabled=true; btn.textContent='AUTHENTICATING...'; err.textContent='';
-  try {
-    const { access_token, user } = await base44.auth.loginViaEmailPassword(email, password);
-    if(!access_token) throw new Error('NO TOKEN');
-    if(user.role !== 'admin' && user.role !== 'Admin') throw new Error('DIRECTOR ACCESS REQUIRED');
-    startApp(user);
-  } catch(e) {
-    err.textContent = (e.message||'AUTH FAILED').toUpperCase();
-    btn.disabled=false; btn.textContent='AUTHENTICATE →';
-  }
+const map_init = () => {
+  map = L.map('gh-map',{center:[42.305,-71.075],zoom:13,zoomControl:true,attributionControl:false});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
 };
 
-window.doLogout = function() {
-  base44.auth.logout();
-  clearInterval(refreshInterval);
-  document.getElementById('app-screen').classList.remove('visible');
-  document.getElementById('login-screen').style.display='flex';
-  document.getElementById('login-password').value='';
-  document.getElementById('login-btn').disabled=false;
-  document.getElementById('login-btn').textContent='AUTHENTICATE →';
-};
-
-window.refreshData = async function() {
+window.refreshData = async () => {
   try {
-    const data = await base44.entities.Assignment.filter({ status: 'InProgress' });
-    assignments = data || [];
+    assignments = await base44.entities.Assignment.filter({ status: 'InProgress' }) || [];
     renderDashboard();
     document.getElementById('map-overlay').classList.add('hidden');
   } catch(e) {
     document.getElementById('map-overlay').innerHTML='<div>ERROR LOADING DATA</div><div style="font-size:9px;margin-top:8px">RETRYING IN 30S...</div>';
+    console.error(e);
   }
 };
 
-function startApp(user) {
-  document.getElementById('login-screen').style.display='none';
-  document.getElementById('app-screen').classList.add('visible');
-  document.getElementById('user-label').textContent=(user.full_name||user.email||'DIRECTOR').toUpperCase();
-  initMap();
-  refreshData();
-  refreshInterval = setInterval(refreshData, 30000);
-  setInterval(updateClock, 1000);
-  updateClock();
-}
+const updateClock = () => {
+  const et = new Date(new Date().toLocaleString('en-US',{timeZone:'America/New_York'}));
+  const p = n => String(n).padStart(2,'0');
+  document.getElementById('clock-et').textContent = p(et.getHours())+':'+p(et.getMinutes())+':'+p(et.getSeconds())+' ET';
+};
 
-function updateClock() {
-  sessionSecs++;
-  const now=new Date(), et=new Date(now.toLocaleString('en-US',{timeZone:'America/New_York'}));
-  const p=n=>String(n).padStart(2,'0');
-  document.getElementById('clock-et').textContent=p(et.getHours())+':'+p(et.getMinutes())+':'+p(et.getSeconds())+' ET';
-  document.getElementById('clock-session').textContent=p(Math.floor(sessionSecs/3600))+':'+p(Math.floor((sessionSecs%3600)/60))+':'+p(sessionSecs%60);
-}
+const timeSince = iso => { if(!iso) return 'NO PING'; const d=Math.floor((Date.now()-new Date(iso))/1000); return d<60?d+'S AGO':d<3600?Math.floor(d/60)+'M AGO':Math.floor(d/3600)+'H AGO'; };
+const isStale = iso => !iso||(Date.now()-new Date(iso))>30*60*1000;
+const getStatus = a => isStale(a.last_ping_at)?'stale':(a.last_on_turf_status||'off');
+const statusColor = s => s==='on'?'#00c8d4':s==='near'?'#ffd700':s==='stale'?'#333':'#ff4455';
 
-function initMap() {
-  map=L.map('gh-map',{center:[42.305,-71.075],zoom:13,zoomControl:true,attributionControl:false});
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
-}
-
-const timeSince=iso=>{if(!iso)return'NO PING';const d=Math.floor((Date.now()-new Date(iso))/1000);return d<60?d+'S AGO':d<3600?Math.floor(d/60)+'M AGO':Math.floor(d/3600)+'H AGO';};
-const isStale=iso=>!iso||(Date.now()-new Date(iso))>30*60*1000;
-const getStatus=a=>isStale(a.last_ping_at)?'stale':(a.last_on_turf_status||'off');
-const statusColor=s=>s==='on'?'#00c8d4':s==='near'?'#ffd700':s==='stale'?'#333':'#ff4455';
-
-function renderDashboard() {
+const renderDashboard = () => {
   if(!assignments.length) {
     document.getElementById('canvasser-list').innerHTML='<div class="empty-state">NO ACTIVE FIELD UNITS<br>WAITING FOR SHIFT START</div>';
     ['kpi-active','kpi-onturf','kpi-stale','kpi-off'].forEach(id=>document.getElementById(id).textContent='0');
     buildTicker([]); return;
   }
   let active=0,onTurf=0,stale=0,off=0; const turfMap={};
-  assignments.forEach(a=>{
+  assignments.forEach(a => {
     const s=getStatus(a);
     if(s!=='stale')active++; if(s==='on')onTurf++; if(s==='stale')stale++; if(s==='off')off++;
     const t=a.turf_name||'UNASSIGNED';
@@ -264,45 +190,45 @@ function renderDashboard() {
   document.getElementById('kpi-stale').textContent=stale;
   document.getElementById('kpi-off').textContent=off;
   renderCanvasserList(); renderTurfBadges(turfMap); buildTicker(assignments); fitMap();
-}
+};
 
-function updateMarker(a,status) {
-  if(!a.last_lat||!a.last_lng)return;
+const updateMarker = (a,status) => {
+  if(!a.last_lat||!a.last_lng) return;
   const color=statusColor(status), name=(a.canvasser_name||'UNKNOWN').toUpperCase();
-  if(markers[a.id]){markers[a.id].setLatLng([a.last_lat,a.last_lng]);markers[a.id].setStyle({fillColor:color});}
+  if(markers[a.id]) { markers[a.id].setLatLng([a.last_lat,a.last_lng]); markers[a.id].setStyle({fillColor:color}); }
   else {
     markers[a.id]=L.circleMarker([a.last_lat,a.last_lng],{radius:10,color:'#000',weight:2,fillColor:color,fillOpacity:1}).addTo(map);
     markers[a.id].bindTooltip(name,{permanent:true,direction:'top',offset:[0,-12]});
     markers[a.id].on('add',()=>{const el=markers[a.id].getTooltip()?._container;if(el)el.style.color=color;});
   }
-}
+};
 
-function cleanupMarkers() {
+const cleanupMarkers = () => {
   const ids=new Set(assignments.map(a=>a.id));
   Object.keys(markers).forEach(id=>{if(!ids.has(id)){map.removeLayer(markers[id]);delete markers[id];}});
-}
+};
 
-function fitMap() {
+const fitMap = () => {
   const pts=assignments.filter(a=>a.last_lat&&a.last_lng).map(a=>[a.last_lat,a.last_lng]);
-  if(pts.length)try{map.fitBounds(pts,{padding:[40,40],maxZoom:15});}catch(e){}
-}
+  if(pts.length) try{map.fitBounds(pts,{padding:[40,40],maxZoom:15});}catch(e){}
+};
 
-function renderCanvasserList() {
+const renderCanvasserList = () => {
   const sorted=[...assignments].sort((a,b)=>({on:0,near:1,off:2,stale:3}[getStatus(a)]||3)-({on:0,near:1,off:2,stale:3}[getStatus(b)]||3));
   document.getElementById('canvasser-list').innerHTML=sorted.map(a=>{
     const s=getStatus(a), label=s==='on'?'ON TURF':s==='near'?'NEAR':s==='stale'?'STALE':'OFF TURF';
     return `<div class="gh-canvasser status-${s}"><div class="gh-c-dot"></div><div class="gh-c-info"><div class="gh-c-name">${(a.canvasser_name||'UNKNOWN').toUpperCase()}</div><div class="gh-c-status">${label}${a.turf_name?' · '+a.turf_name.toUpperCase():''}</div></div><div class="gh-c-meta"><div class="gh-c-ping">${timeSince(a.last_ping_at)}</div><div class="gh-c-ping-label">LAST PING</div></div></div>`;
   }).join('');
-}
+};
 
-function renderTurfBadges(turfMap) {
+const renderTurfBadges = turfMap => {
   document.getElementById('turf-badges').innerHTML=Object.entries(turfMap).map(([name,d])=>{
     const pct=d.total>0?d.on/d.total:0, cls=pct>=0.75?'badge-good':pct>=0.4?'badge-warn':'badge-bad';
     return `<div class="gh-turf-badge ${cls}"><div class="badge-name">${name.toUpperCase()}</div><div class="badge-count">${d.on}/${d.total} ON TURF</div></div>`;
   }).join('');
-}
+};
 
-function buildTicker(list) {
+const buildTicker = list => {
   const track=document.getElementById('ticker-track');
   if(!list.length){track.textContent='NO ACTIVE FIELD UNITS';track.classList.remove('animate');return;}
   const items=list.map(a=>{
@@ -311,10 +237,13 @@ function buildTicker(list) {
     return `<span class="gh-tick-item"><span class="${cls}">[${label}]</span> <span class="tick-name">${(a.canvasser_name||'UNKNOWN').toUpperCase()}</span> · ${(a.turf_name||'').toUpperCase()} · ${timeSince(a.last_ping_at)}</span>`;
   });
   track.innerHTML=[...items,...items].join(''); track.classList.add('animate');
-}
+};
 
-document.getElementById('login-password').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
-document.getElementById('login-email').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('login-password').focus();});
+map_init();
+refreshData();
+setInterval(refreshData, 30000);
+setInterval(updateClock, 1000);
+updateClock();
 </script>
 </body>
 </html>
