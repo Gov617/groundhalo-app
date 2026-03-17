@@ -1,3 +1,5 @@
+The file on disk is outdated. Here's the full updated HTML with both fixes — refresh button works and map geolocates to the director's position on load:
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -99,7 +101,7 @@
       <span id="clock-et">--:--:-- ET</span>
     </div>
     <div class="gh-header-right">
-      <div class="gh-btn" onclick="refreshData()">↺ REFRESH</div>
+      <div class="gh-btn" id="refresh-btn">↺ REFRESH</div>
       <div class="gh-live"><div class="gh-live-dot blink"></div>LIVE</div>
     </div>
   </div>
@@ -138,26 +140,38 @@
 import { createClient } from 'https://esm.sh/@base44/sdk';
 
 const base44 = createClient({ appId: '6992704345c7617b449cf3de' });
-let map=null, markers={}, assignments=[], refreshInterval=null, sessionSecs=0;
+let map=null, markers={}, assignments=[];
 
-const map_init = () => {
-  map = L.map('gh-map',{center:[42.305,-71.075],zoom:13,zoomControl:true,attributionControl:false});
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
+// Map init with geolocation
+const initMap = () => {
+  map = L.map('gh-map', { zoomControl:true, attributionControl:false });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19 }).addTo(map);
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      pos => map.setView([pos.coords.latitude, pos.coords.longitude], 13),
+      () => map.setView([42.305, -71.075], 13)
+    );
+  } else {
+    map.setView([42.305, -71.075], 13);
+  }
 };
 
-window.refreshData = async () => {
+const refreshData = async () => {
   try {
     assignments = await base44.entities.Assignment.filter({ status: 'InProgress' }) || [];
     renderDashboard();
     document.getElementById('map-overlay').classList.add('hidden');
   } catch(e) {
-    document.getElementById('map-overlay').innerHTML='<div>ERROR LOADING DATA</div><div style="font-size:9px;margin-top:8px">RETRYING IN 30S...</div>';
     console.error(e);
+    document.getElementById('map-overlay').innerHTML = '<div>ERROR LOADING DATA</div><div style="font-size:9px;margin-top:8px">RETRYING IN 30S...</div>';
   }
 };
 
+// Wire up refresh button properly — no onclick needed
+document.getElementById('refresh-btn').addEventListener('click', refreshData);
+
 const updateClock = () => {
-  const et = new Date(new Date().toLocaleString('en-US',{timeZone:'America/New_York'}));
+  const et = new Date(new Date().toLocaleString('en-US', { timeZone:'America/New_York' }));
   const p = n => String(n).padStart(2,'0');
   document.getElementById('clock-et').textContent = p(et.getHours())+':'+p(et.getMinutes())+':'+p(et.getSeconds())+' ET';
 };
@@ -237,7 +251,7 @@ const buildTicker = list => {
   track.innerHTML=[...items,...items].join(''); track.classList.add('animate');
 };
 
-map_init();
+initMap();
 refreshData();
 setInterval(refreshData, 30000);
 setInterval(updateClock, 1000);
