@@ -1,4 +1,4 @@
-Perfect — now I know exactly what to do. The SDK calls an internal endpoint — I just need to reverse engineer it. The SDK is just a wrapper around a fetch call to something like groundhaloapp.base44.app/api/auth/login. Let me write the full working version now:
+OK — the SDK exists as an npm package. I can load it directly in the browser and use it just like Base44 does internally. This means no reverse engineering needed — I just use the real SDK. Here's the updated full HTML:
 
 <!DOCTYPE html>
 <html lang="en">
@@ -9,6 +9,7 @@ Perfect — now I know exactly what to do. The SDK calls an internal endpoint �
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/@base44/sdk/dist/index.umd.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root { --bg:#080a08; --bg2:#0d0f0d; --bg3:#141614; --cyan:#00c8d4; --cyan-faint:rgba(0,200,212,0.08); --cyan-border:rgba(0,200,212,0.2); --amber:#ffd700; --red:#ff4455; --text:rgba(255,255,255,0.85); --text-dim:rgba(255,255,255,0.4); --border:#1c1e1c; }
@@ -167,81 +168,74 @@ Perfect — now I know exactly what to do. The SDK calls an internal endpoint �
     </div>
   </div>
 </div>
-<script>
-const BASE_URL='https://groundhaloapp.base44.app';
-const APP_ID='6992704345c7617b449cf3de';
-let token=null,map=null,markers={},assignments=[],refreshInterval=null,sessionSecs=0;
+<script type="module">
+import { createClient } from 'https://esm.sh/@base44/sdk';
 
-async function doLogin(){
-  const email=document.getElementById('login-email').value.trim();
-  const password=document.getElementById('login-password').value;
-  const btn=document.getElementById('login-btn');
-  const err=document.getElementById('login-error');
+const base44 = createClient({ appId: '6992704345c7617b449cf3de' });
+
+let map=null, markers={}, assignments=[], refreshInterval=null, sessionSecs=0;
+
+window.doLogin = async function() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const btn = document.getElementById('login-btn');
+  const err = document.getElementById('login-error');
   if(!email||!password){err.textContent='EMAIL AND PASSWORD REQUIRED';return;}
-  btn.disabled=true;btn.textContent='AUTHENTICATING...';err.textContent='';
-  try{
-    // Try Base44 SDK endpoint format
-    const res=await fetch(`${BASE_URL}/api/auth/login`,{
-      method:'POST',
-      headers:{'Content-Type':'application/json','X-App-ID':APP_ID},
-      body:JSON.stringify({email,password})
-    });
-    const data=await res.json();
-    if(!res.ok) throw new Error(data.message||data.error||'AUTH FAILED');
-    token=data.access_token||data.token||data.jwt;
-    const user=data.user||{email};
-    if(!token) throw new Error('NO TOKEN RECEIVED');
+  btn.disabled=true; btn.textContent='AUTHENTICATING...'; err.textContent='';
+  try {
+    const { access_token, user } = await base44.auth.loginViaEmailPassword(email, password);
+    if(!access_token) throw new Error('NO TOKEN');
+    if(user.role !== 'admin' && user.role !== 'Admin') throw new Error('DIRECTOR ACCESS REQUIRED');
     startApp(user);
-  }catch(e){
-    err.textContent=e.message.toUpperCase();
-    btn.disabled=false;btn.textContent='AUTHENTICATE →';
+  } catch(e) {
+    err.textContent = (e.message||'AUTH FAILED').toUpperCase();
+    btn.disabled=false; btn.textContent='AUTHENTICATE →';
   }
-}
+};
 
-function doLogout(){
-  token=null;clearInterval(refreshInterval);
+window.doLogout = function() {
+  base44.auth.logout();
+  clearInterval(refreshInterval);
   document.getElementById('app-screen').classList.remove('visible');
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('login-password').value='';
   document.getElementById('login-btn').disabled=false;
   document.getElementById('login-btn').textContent='AUTHENTICATE →';
-}
+};
 
-function startApp(user){
+window.refreshData = async function() {
+  try {
+    const data = await base44.entities.Assignment.filter({ status: 'InProgress' });
+    assignments = data || [];
+    renderDashboard();
+    document.getElementById('map-overlay').classList.add('hidden');
+  } catch(e) {
+    document.getElementById('map-overlay').innerHTML='<div>ERROR LOADING DATA</div><div style="font-size:9px;margin-top:8px">RETRYING IN 30S...</div>';
+  }
+};
+
+function startApp(user) {
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app-screen').classList.add('visible');
   document.getElementById('user-label').textContent=(user.full_name||user.email||'DIRECTOR').toUpperCase();
-  initMap();refreshData();
-  refreshInterval=setInterval(refreshData,30000);
-  setInterval(updateClock,1000);updateClock();
+  initMap();
+  refreshData();
+  refreshInterval = setInterval(refreshData, 30000);
+  setInterval(updateClock, 1000);
+  updateClock();
 }
 
-function updateClock(){
+function updateClock() {
   sessionSecs++;
-  const now=new Date(),et=new Date(now.toLocaleString('en-US',{timeZone:'America/New_York'}));
+  const now=new Date(), et=new Date(now.toLocaleString('en-US',{timeZone:'America/New_York'}));
   const p=n=>String(n).padStart(2,'0');
   document.getElementById('clock-et').textContent=p(et.getHours())+':'+p(et.getMinutes())+':'+p(et.getSeconds())+' ET';
   document.getElementById('clock-session').textContent=p(Math.floor(sessionSecs/3600))+':'+p(Math.floor((sessionSecs%3600)/60))+':'+p(sessionSecs%60);
 }
 
-function initMap(){
+function initMap() {
   map=L.map('gh-map',{center:[42.305,-71.075],zoom:13,zoomControl:true,attributionControl:false});
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
-}
-
-async function refreshData(){
-  try{
-    const res=await fetch(`${BASE_URL}/api/entities/Assignment?status=InProgress`,{
-      headers:{'Authorization':`Bearer ${token}`,'X-App-ID':APP_ID}
-    });
-    if(!res.ok) throw new Error();
-    const data=await res.json();
-    assignments=Array.isArray(data)?data:(data.data||data.items||data.results||[]);
-    renderDashboard();
-    document.getElementById('map-overlay').classList.add('hidden');
-  }catch(e){
-    document.getElementById('map-overlay').innerHTML='<div>ERROR LOADING DATA</div><div style="font-size:9px;margin-top:8px">RETRYING IN 30S...</div>';
-  }
 }
 
 const timeSince=iso=>{if(!iso)return'NO PING';const d=Math.floor((Date.now()-new Date(iso))/1000);return d<60?d+'S AGO':d<3600?Math.floor(d/60)+'M AGO':Math.floor(d/3600)+'H AGO';};
@@ -249,19 +243,19 @@ const isStale=iso=>!iso||(Date.now()-new Date(iso))>30*60*1000;
 const getStatus=a=>isStale(a.last_ping_at)?'stale':(a.last_on_turf_status||'off');
 const statusColor=s=>s==='on'?'#00c8d4':s==='near'?'#ffd700':s==='stale'?'#333':'#ff4455';
 
-function renderDashboard(){
-  if(!assignments.length){
+function renderDashboard() {
+  if(!assignments.length) {
     document.getElementById('canvasser-list').innerHTML='<div class="empty-state">NO ACTIVE FIELD UNITS<br>WAITING FOR SHIFT START</div>';
     ['kpi-active','kpi-onturf','kpi-stale','kpi-off'].forEach(id=>document.getElementById(id).textContent='0');
-    buildTicker([]);return;
+    buildTicker([]); return;
   }
-  let active=0,onTurf=0,stale=0,off=0;const turfMap={};
+  let active=0,onTurf=0,stale=0,off=0; const turfMap={};
   assignments.forEach(a=>{
     const s=getStatus(a);
-    if(s!=='stale')active++;if(s==='on')onTurf++;if(s==='stale')stale++;if(s==='off')off++;
+    if(s!=='stale')active++; if(s==='on')onTurf++; if(s==='stale')stale++; if(s==='off')off++;
     const t=a.turf_name||'UNASSIGNED';
     if(!turfMap[t])turfMap[t]={total:0,on:0};
-    turfMap[t].total++;if(s==='on')turfMap[t].on++;
+    turfMap[t].total++; if(s==='on')turfMap[t].on++;
     updateMarker(a,s);
   });
   cleanupMarkers();
@@ -269,54 +263,54 @@ function renderDashboard(){
   document.getElementById('kpi-onturf').textContent=onTurf;
   document.getElementById('kpi-stale').textContent=stale;
   document.getElementById('kpi-off').textContent=off;
-  renderCanvasserList();renderTurfBadges(turfMap);buildTicker(assignments);fitMap();
+  renderCanvasserList(); renderTurfBadges(turfMap); buildTicker(assignments); fitMap();
 }
 
-function updateMarker(a,status){
+function updateMarker(a,status) {
   if(!a.last_lat||!a.last_lng)return;
-  const color=statusColor(status),name=(a.canvasser_name||'UNKNOWN').toUpperCase();
+  const color=statusColor(status), name=(a.canvasser_name||'UNKNOWN').toUpperCase();
   if(markers[a.id]){markers[a.id].setLatLng([a.last_lat,a.last_lng]);markers[a.id].setStyle({fillColor:color});}
-  else{
+  else {
     markers[a.id]=L.circleMarker([a.last_lat,a.last_lng],{radius:10,color:'#000',weight:2,fillColor:color,fillOpacity:1}).addTo(map);
     markers[a.id].bindTooltip(name,{permanent:true,direction:'top',offset:[0,-12]});
     markers[a.id].on('add',()=>{const el=markers[a.id].getTooltip()?._container;if(el)el.style.color=color;});
   }
 }
 
-function cleanupMarkers(){
+function cleanupMarkers() {
   const ids=new Set(assignments.map(a=>a.id));
   Object.keys(markers).forEach(id=>{if(!ids.has(id)){map.removeLayer(markers[id]);delete markers[id];}});
 }
 
-function fitMap(){
+function fitMap() {
   const pts=assignments.filter(a=>a.last_lat&&a.last_lng).map(a=>[a.last_lat,a.last_lng]);
   if(pts.length)try{map.fitBounds(pts,{padding:[40,40],maxZoom:15});}catch(e){}
 }
 
-function renderCanvasserList(){
+function renderCanvasserList() {
   const sorted=[...assignments].sort((a,b)=>({on:0,near:1,off:2,stale:3}[getStatus(a)]||3)-({on:0,near:1,off:2,stale:3}[getStatus(b)]||3));
   document.getElementById('canvasser-list').innerHTML=sorted.map(a=>{
-    const s=getStatus(a),label=s==='on'?'ON TURF':s==='near'?'NEAR':s==='stale'?'STALE':'OFF TURF';
+    const s=getStatus(a), label=s==='on'?'ON TURF':s==='near'?'NEAR':s==='stale'?'STALE':'OFF TURF';
     return `<div class="gh-canvasser status-${s}"><div class="gh-c-dot"></div><div class="gh-c-info"><div class="gh-c-name">${(a.canvasser_name||'UNKNOWN').toUpperCase()}</div><div class="gh-c-status">${label}${a.turf_name?' · '+a.turf_name.toUpperCase():''}</div></div><div class="gh-c-meta"><div class="gh-c-ping">${timeSince(a.last_ping_at)}</div><div class="gh-c-ping-label">LAST PING</div></div></div>`;
   }).join('');
 }
 
-function renderTurfBadges(turfMap){
+function renderTurfBadges(turfMap) {
   document.getElementById('turf-badges').innerHTML=Object.entries(turfMap).map(([name,d])=>{
-    const pct=d.total>0?d.on/d.total:0,cls=pct>=0.75?'badge-good':pct>=0.4?'badge-warn':'badge-bad';
+    const pct=d.total>0?d.on/d.total:0, cls=pct>=0.75?'badge-good':pct>=0.4?'badge-warn':'badge-bad';
     return `<div class="gh-turf-badge ${cls}"><div class="badge-name">${name.toUpperCase()}</div><div class="badge-count">${d.on}/${d.total} ON TURF</div></div>`;
   }).join('');
 }
 
-function buildTicker(list){
+function buildTicker(list) {
   const track=document.getElementById('ticker-track');
   if(!list.length){track.textContent='NO ACTIVE FIELD UNITS';track.classList.remove('animate');return;}
   const items=list.map(a=>{
-    const s=getStatus(a),label=s==='on'?'ON TURF':s==='near'?'NEAR':s==='stale'?'STALE':'OFF TURF';
+    const s=getStatus(a), label=s==='on'?'ON TURF':s==='near'?'NEAR':s==='stale'?'STALE':'OFF TURF';
     const cls=s==='on'?'tick-on':s==='near'?'tick-near':'tick-off';
     return `<span class="gh-tick-item"><span class="${cls}">[${label}]</span> <span class="tick-name">${(a.canvasser_name||'UNKNOWN').toUpperCase()}</span> · ${(a.turf_name||'').toUpperCase()} · ${timeSince(a.last_ping_at)}</span>`;
   });
-  track.innerHTML=[...items,...items].join('');track.classList.add('animate');
+  track.innerHTML=[...items,...items].join(''); track.classList.add('animate');
 }
 
 document.getElementById('login-password').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
