@@ -1,0 +1,395 @@
+Here's the full code — copy everything:
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GroundHalo — Field Ops</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root { --bg: #080a08; --bg2: #0d0f0d; --bg3: #141614; --cyan: #00c8d4; --cyan-faint: rgba(0,200,212,0.08); --cyan-border: rgba(0,200,212,0.2); --amber: #ffd700; --red: #ff4455; --text: rgba(255,255,255,0.85); --text-dim: rgba(255,255,255,0.4); --border: #1c1e1c; }
+  html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: 'Space Mono', monospace; font-size: 11px; }
+  body::after { content: ''; position: fixed; inset: 0; z-index: 9999; pointer-events: none; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 4px); animation: scanlines 8s linear infinite; }
+  @keyframes scanlines { from { background-position: 0 0; } to { background-position: 0 100px; } }
+  @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0; } }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+  .blink { animation: blink 1.2s infinite; }
+  #login-screen { position: fixed; inset: 0; z-index: 1000; background: var(--bg); display: flex; align-items: center; justify-content: center; }
+  .login-box { width: 360px; border: 1px solid var(--border); background: var(--bg2); padding: 40px 36px; animation: fadeIn 0.4s ease; }
+  .login-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 32px; }
+  .login-logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 10px var(--cyan); }
+  .login-logo-text { font-size: 16px; font-weight: 700; letter-spacing: 4px; color: var(--cyan); }
+  .login-label { font-size: 9px; letter-spacing: 2px; color: var(--text-dim); margin-bottom: 6px; text-transform: uppercase; }
+  .login-input { width: 100%; background: var(--bg3); border: 1px solid var(--border); padding: 10px 12px; font-family: 'Space Mono', monospace; font-size: 11px; color: var(--text); margin-bottom: 14px; outline: none; transition: border-color 0.2s; }
+  .login-input:focus { border-color: var(--cyan-border); }
+  .login-btn { width: 100%; padding: 12px; background: var(--cyan); color: #000; font-family: 'Space Mono', monospace; font-size: 11px; font-weight: 700; letter-spacing: 2px; border: none; cursor: pointer; margin-top: 8px; transition: opacity 0.2s; }
+  .login-btn:hover { opacity: 0.85; }
+  .login-btn:disabled { opacity: 0.5; cursor: default; }
+  .login-error { font-size: 10px; color: var(--red); margin-top: 10px; text-align: center; min-height: 14px; }
+  .login-sub { font-size: 9px; color: var(--text-dim); letter-spacing: 1px; margin-bottom: 28px; }
+  #app-screen { display: none; flex-direction: column; height: 100vh; }
+  #app-screen.visible { display: flex; }
+  .gh-header { height: 44px; flex-shrink: 0; background: var(--bg2); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 16px; }
+  .gh-logo { display: flex; align-items: center; gap: 10px; }
+  .gh-logo-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
+  .gh-logo-text { font-size: 13px; font-weight: 700; letter-spacing: 4px; color: var(--cyan); }
+  .gh-logo-sub { font-size: 9px; color: var(--text-dim); letter-spacing: 2px; }
+  .gh-header-center { display: flex; align-items: center; gap: 20px; font-size: 10px; color: var(--text-dim); letter-spacing: 1px; }
+  .gh-header-center span { color: var(--text); }
+  .gh-header-right { display: flex; align-items: center; gap: 12px; }
+  .gh-live { display: flex; align-items: center; gap: 6px; background: var(--cyan-faint); border: 1px solid var(--cyan-border); padding: 3px 10px; font-size: 9px; font-weight: 700; letter-spacing: 2px; color: var(--cyan); }
+  .gh-live-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 6px var(--cyan); }
+  .gh-logout { font-size: 9px; color: var(--text-dim); cursor: pointer; letter-spacing: 1px; padding: 3px 8px; border: 1px solid var(--border); transition: color 0.2s; }
+  .gh-logout:hover { color: var(--red); border-color: var(--red); }
+  .gh-refresh { font-size: 9px; color: var(--text-dim); cursor: pointer; letter-spacing: 1px; padding: 3px 8px; border: 1px solid var(--border); transition: color 0.2s; }
+  .gh-refresh:hover { color: var(--cyan); border-color: var(--cyan-border); }
+  .gh-body { display: flex; flex: 1; overflow: hidden; }
+  .gh-map-wrap { flex: 1; position: relative; }
+  #gh-map { width: 100%; height: 100%; }
+  #gh-map .leaflet-tile-pane { filter: brightness(0.4) saturate(0.25) hue-rotate(160deg); }
+  .gh-turf-badges { position: absolute; bottom: 12px; left: 12px; z-index: 1000; display: flex; flex-direction: column; gap: 6px; }
+  .gh-turf-badge { background: rgba(8,10,8,0.9); border: 1px solid var(--border); padding: 5px 10px; font-size: 10px; letter-spacing: 1px; backdrop-filter: blur(4px); }
+  .badge-name { color: var(--text-dim); margin-bottom: 2px; }
+  .badge-count { font-weight: 700; }
+  .badge-good .badge-count { color: var(--cyan); }
+  .badge-warn .badge-count { color: var(--amber); }
+  .badge-bad .badge-count { color: var(--red); }
+  .map-loading { position: absolute; inset: 0; z-index: 999; background: rgba(8,10,8,0.8); display: flex; align-items: center; justify-content: center; font-size: 10px; letter-spacing: 2px; color: var(--text-dim); }
+  .gh-panel { width: 280px; flex-shrink: 0; background: var(--bg2); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+  .gh-panel-section { border-bottom: 1px solid var(--border); padding: 10px 12px; }
+  .gh-section-label { font-size: 9px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 10px; }
+  .gh-kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .gh-kpi { background: var(--cyan-faint); border: 1px solid var(--border); padding: 8px 10px; }
+  .gh-kpi-label { font-size: 8px; color: var(--text-dim); letter-spacing: 1px; margin-bottom: 4px; }
+  .gh-kpi-val { font-size: 20px; font-weight: 700; line-height: 1; color: var(--cyan); }
+  .gh-kpi-val.amber { color: var(--amber); }
+  .gh-kpi-val.red { color: var(--red); }
+  .gh-canvassers { flex: 1; overflow-y: auto; }
+  .gh-canvassers::-webkit-scrollbar { width: 3px; }
+  .gh-canvassers::-webkit-scrollbar-track { background: var(--bg); }
+  .gh-canvassers::-webkit-scrollbar-thumb { background: var(--border); }
+  .gh-canvasser { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid rgba(28,30,28,0.6); cursor: pointer; transition: background 0.15s; }
+  .gh-canvasser:hover { background: rgba(0,200,212,0.04); }
+  .gh-c-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .gh-c-info { flex: 1; min-width: 0; }
+  .gh-c-name { font-weight: 700; font-size: 10px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .gh-c-status { font-size: 8px; letter-spacing: 1px; color: var(--text-dim); }
+  .gh-c-meta { text-align: right; flex-shrink: 0; }
+  .gh-c-ping { font-size: 9px; font-weight: 700; }
+  .gh-c-ping-label { font-size: 8px; color: var(--text-dim); letter-spacing: 1px; }
+  .status-on .gh-c-dot { background: var(--cyan); box-shadow: 0 0 5px var(--cyan); }
+  .status-on .gh-c-name { color: var(--cyan); }
+  .status-on .gh-c-ping { color: var(--cyan); }
+  .status-near .gh-c-dot { background: var(--amber); }
+  .status-near .gh-c-name { color: var(--amber); }
+  .status-near .gh-c-ping { color: var(--amber); }
+  .status-off .gh-c-dot { background: var(--red); }
+  .status-off .gh-c-name { color: var(--red); }
+  .status-off .gh-c-ping { color: var(--red); }
+  .status-stale .gh-c-dot { background: #555; }
+  .status-stale .gh-c-name { color: #555; }
+  .status-stale .gh-c-ping { color: #555; }
+  .empty-state { padding: 24px 12px; text-align: center; color: var(--text-dim); font-size: 10px; letter-spacing: 1px; line-height: 1.8; }
+  .gh-ticker { height: 28px; flex-shrink: 0; background: var(--bg2); border-top: 1px solid var(--border); display: flex; align-items: center; overflow: hidden; }
+  .gh-ticker-prefix { padding: 0 12px; font-size: 9px; letter-spacing: 2px; color: var(--text-dim); border-right: 1px solid var(--border); height: 100%; display: flex; align-items: center; flex-shrink: 0; white-space: nowrap; }
+  .gh-ticker-track { display: flex; align-items: center; white-space: nowrap; }
+  .gh-ticker-track.animate { animation: ticker 60s linear infinite; }
+  @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  .gh-tick-item { padding: 0 20px; font-size: 9px; color: var(--text-dim); border-right: 1px solid var(--border); }
+  .tick-on { color: var(--cyan); font-weight: 700; }
+  .tick-near { color: var(--amber); font-weight: 700; }
+  .tick-off { color: var(--red); font-weight: 700; }
+  .tick-addr { color: var(--text); }
+  .leaflet-tooltip { background: transparent !important; border: none !important; box-shadow: none !important; font-family: 'Space Mono', monospace !important; font-size: 9px !important; font-weight: 700 !important; letter-spacing: 1px !important; text-transform: uppercase !important; padding: 0 !important; }
+  .leaflet-container { background: #080a08 !important; }
+</style>
+</head>
+<body>
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="login-logo-dot blink"></div>
+      <div>
+        <div class="login-logo-text">GROUNDHALO</div>
+        <div style="font-size:9px;color:rgba(255,255,255,0.3);letter-spacing:2px;margin-top:2px;">// DIRECTOR ACCESS</div>
+      </div>
+    </div>
+    <div class="login-sub">AUTHORIZED PERSONNEL ONLY</div>
+    <div class="login-label">Email</div>
+    <input type="email" id="login-email" class="login-input" placeholder="director@campaign.org">
+    <div class="login-label">Password</div>
+    <input type="password" id="login-password" class="login-input" placeholder="••••••••">
+    <button class="login-btn" id="login-btn" onclick="doLogin()">AUTHENTICATE</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+<div id="app-screen">
+  <div class="gh-header">
+    <div class="gh-logo">
+      <div class="gh-logo-dot blink"></div>
+      <div>
+        <div class="gh-logo-text">GROUNDHALO</div>
+        <div class="gh-logo-sub">// LIVE OPS</div>
+      </div>
+    </div>
+    <div class="gh-header-center">
+      <span id="org-label">LOADING...</span>
+      <span>SESSION <span id="clock-shift">00:00:00</span></span>
+      <span id="clock-et">--:--:-- ET</span>
+    </div>
+    <div class="gh-header-right">
+      <div class="gh-refresh" onclick="refreshData()">↺ REFRESH</div>
+      <div class="gh-live"><div class="gh-live-dot blink"></div>LIVE</div>
+      <div class="gh-logout" onclick="doLogout()">LOGOUT</div>
+    </div>
+  </div>
+  <div class="gh-body">
+    <div class="gh-map-wrap">
+      <div id="gh-map"></div>
+      <div id="map-loading" class="map-loading">LOADING FIELD DATA...</div>
+      <div class="gh-turf-badges" id="turf-badges"></div>
+    </div>
+    <div class="gh-panel">
+      <div class="gh-panel-section">
+        <div class="gh-section-label">// SHIFT METRICS</div>
+        <div class="gh-kpi-grid">
+          <div class="gh-kpi"><div class="gh-kpi-label">ACTIVE</div><div class="gh-kpi-val" id="kpi-active">—</div></div>
+          <div class="gh-kpi"><div class="gh-kpi-label">ON TURF</div><div class="gh-kpi-val" id="kpi-onturf">—</div></div>
+          <div class="gh-kpi"><div class="gh-kpi-label">STALE</div><div class="gh-kpi-val amber" id="kpi-stale">—</div></div>
+          <div class="gh-kpi"><div class="gh-kpi-label">OFF TURF</div><div class="gh-kpi-val red" id="kpi-off">—</div></div>
+        </div>
+      </div>
+      <div class="gh-panel-section" style="padding-bottom:0;">
+        <div class="gh-section-label">// FIELD UNITS</div>
+      </div>
+      <div class="gh-canvassers" id="canvasser-list">
+        <div class="empty-state">LOADING FIELD UNITS...</div>
+      </div>
+    </div>
+  </div>
+  <div class="gh-ticker">
+    <div class="gh-ticker-prefix">LIVE ▶</div>
+    <div style="overflow:hidden;flex:1;"><div class="gh-ticker-track" id="ticker-track">AWAITING DATA...</div></div>
+  </div>
+</div>
+<script>
+const APP_ID = 'app-6992704345c7617b449cf3de';
+const BASE_URL = `https://${APP_ID}.base44.com`;
+let sessionToken = null;
+let currentUser = null;
+let map = null;
+let markers = {};
+let assignments = [];
+let refreshInterval = null;
+let sessionSecs = 0;
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const btn = document.getElementById('login-btn');
+  const err = document.getElementById('login-error');
+  if (!email || !password) { err.textContent = 'EMAIL AND PASSWORD REQUIRED'; return; }
+  btn.disabled = true; btn.textContent = 'AUTHENTICATING...'; err.textContent = '';
+  try {
+    const res = await fetch(`${BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'AUTH FAILED');
+    sessionToken = data.token || data.access_token || data.session_token;
+    currentUser = data.user || data;
+    if (currentUser.role !== 'admin') throw new Error('DIRECTOR ACCESS REQUIRED');
+    startApp();
+  } catch(e) {
+    err.textContent = e.message.toUpperCase();
+    btn.disabled = false; btn.textContent = 'AUTHENTICATE';
+  }
+}
+
+function doLogout() {
+  sessionToken = null; currentUser = null;
+  clearInterval(refreshInterval);
+  document.getElementById('app-screen').classList.remove('visible');
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('login-password').value = '';
+}
+
+function startApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app-screen').classList.add('visible');
+  document.getElementById('org-label').textContent = currentUser?.org_id || 'ORG';
+  initMap();
+  refreshData();
+  refreshInterval = setInterval(refreshData, 30000);
+  setInterval(updateClock, 1000);
+  updateClock();
+}
+
+function updateClock() {
+  sessionSecs++;
+  const now = new Date();
+  const et = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+  const h=String(et.getHours()).padStart(2,'0'), m=String(et.getMinutes()).padStart(2,'0'), s=String(et.getSeconds()).padStart(2,'0');
+  document.getElementById('clock-et').textContent = h+':'+m+':'+s+' ET';
+  const sh=String(Math.floor(sessionSecs/3600)).padStart(2,'0'), sm=String(Math.floor((sessionSecs%3600)/60)).padStart(2,'0'), ss=String(sessionSecs%60).padStart(2,'0');
+  document.getElementById('clock-shift').textContent = sh+':'+sm+':'+ss;
+}
+
+function initMap() {
+  map = L.map('gh-map', { center:[42.305,-71.075], zoom:13, zoomControl:true, attributionControl:false });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19 }).addTo(map);
+}
+
+async function refreshData() {
+  try {
+    const res = await fetch(`${BASE_URL}/api/entities/Assignment?filters=${encodeURIComponent(JSON.stringify({status:'InProgress'}))}`, {
+      headers: { 'Authorization': `Bearer ${sessionToken}`, 'Content-Type': 'application/json' }
+    });
+    if (!res.ok) throw new Error('FETCH FAILED');
+    const data = await res.json();
+    assignments = Array.isArray(data) ? data : (data.data || data.items || []);
+    renderDashboard();
+    document.getElementById('map-loading').style.display = 'none';
+  } catch(e) {
+    console.error('Refresh error:', e);
+    document.getElementById('map-loading').textContent = 'ERROR LOADING DATA — RETRYING...';
+  }
+}
+
+function timeSince(isoStr) {
+  if (!isoStr) return 'NO PING';
+  const diff = Math.floor((Date.now() - new Date(isoStr)) / 1000);
+  if (diff < 60) return diff+'S AGO';
+  if (diff < 3600) return Math.floor(diff/60)+'M AGO';
+  return Math.floor(diff/3600)+'H AGO';
+}
+
+function isStale(isoStr) {
+  if (!isoStr) return true;
+  return (Date.now() - new Date(isoStr)) > 30 * 60 * 1000;
+}
+
+function getStatus(a) {
+  if (isStale(a.last_ping_at)) return 'stale';
+  return a.last_on_turf_status || 'off';
+}
+
+function statusColor(status) {
+  if (status === 'on') return '#00c8d4';
+  if (status === 'near') return '#ffd700';
+  if (status === 'stale') return '#444';
+  return '#ff4455';
+}
+
+function renderDashboard() {
+  if (!assignments.length) {
+    document.getElementById('canvasser-list').innerHTML = '<div class="empty-state">NO ACTIVE FIELD UNITS<br>WAITING FOR SHIFT START</div>';
+    updateKPIs(0,0,0,0); buildTicker([]); return;
+  }
+  let active=0, onTurf=0, stale=0, off=0;
+  const turfMap = {};
+  assignments.forEach(a => {
+    const status = getStatus(a);
+    if (status !== 'stale') active++;
+    if (status === 'on') onTurf++;
+    if (status === 'stale') stale++;
+    if (status === 'off') off++;
+    const turf = a.turf_name || 'UNASSIGNED';
+    if (!turfMap[turf]) turfMap[turf] = { total:0, on:0 };
+    turfMap[turf].total++;
+    if (status === 'on') turfMap[turf].on++;
+    updateMarker(a, status);
+  });
+  cleanupMarkers();
+  updateKPIs(active, onTurf, stale, off);
+  renderCanvasserList();
+  renderTurfBadges(turfMap);
+  buildTicker(assignments);
+  fitMapToMarkers();
+}
+
+function updateMarker(a, status) {
+  const id = a.id;
+  const lat = a.last_lat, lng = a.last_lng;
+  if (!lat || !lng) return;
+  const color = statusColor(status);
+  const name = (a.canvasser_name || 'UNKNOWN').toUpperCase();
+  if (markers[id]) {
+    markers[id].setLatLng([lat, lng]);
+    markers[id].setStyle({ fillColor: color });
+  } else {
+    markers[id] = L.circleMarker([lat, lng], { radius:10, color:'#000', weight:2, fillColor:color, fillOpacity:1 }).addTo(map);
+    markers[id].bindTooltip(name, { permanent:true, direction:'top', offset:[0,-12] });
+    markers[id].on('add', () => { const el = markers[id].getTooltip()?._container; if(el) el.style.color = color; });
+  }
+}
+
+function cleanupMarkers() {
+  const activeIds = new Set(assignments.map(a => a.id));
+  Object.keys(markers).forEach(id => { if(!activeIds.has(id)) { map.removeLayer(markers[id]); delete markers[id]; } });
+}
+
+function fitMapToMarkers() {
+  const pts = assignments.filter(a => a.last_lat && a.last_lng).map(a => [a.last_lat, a.last_lng]);
+  if (pts.length > 0) { try { map.fitBounds(pts, { padding:[40,40], maxZoom:15 }); } catch(e) {} }
+}
+
+function updateKPIs(active, onTurf, stale, off) {
+  document.getElementById('kpi-active').textContent = active;
+  document.getElementById('kpi-onturf').textContent = onTurf;
+  document.getElementById('kpi-stale').textContent = stale;
+  document.getElementById('kpi-off').textContent = off;
+}
+
+function renderCanvasserList() {
+  const sorted = [...assignments].sort((a,b) => {
+    const order = {on:0, near:1, off:2, stale:3};
+    return (order[getStatus(a)]||3) - (order[getStatus(b)]||3);
+  });
+  document.getElementById('canvasser-list').innerHTML = sorted.map(a => {
+    const status = getStatus(a);
+    const name = (a.canvasser_name || 'UNKNOWN').toUpperCase();
+    const turf = (a.turf_name || '').toUpperCase();
+    const ping = timeSince(a.last_ping_at);
+    const statusLabel = status==='stale'?'STALE':status==='on'?'ON TURF':status==='near'?'NEAR':'OFF TURF';
+    return `<div class="gh-canvasser status-${status}">
+      <div class="gh-c-dot"></div>
+      <div class="gh-c-info"><div class="gh-c-name">${name}</div><div class="gh-c-status">${statusLabel}${turf?' · '+turf:''}</div></div>
+      <div class="gh-c-meta"><div class="gh-c-ping">${ping}</div><div class="gh-c-ping-label">LAST PING</div></div>
+    </div>`;
+  }).join('');
+}
+
+function renderTurfBadges(turfMap) {
+  document.getElementById('turf-badges').innerHTML = Object.entries(turfMap).map(([name, data]) => {
+    const pct = data.total > 0 ? data.on/data.total : 0;
+    const cls = pct >= 0.75 ? 'badge-good' : pct >= 0.4 ? 'badge-warn' : 'badge-bad';
+    return `<div class="gh-turf-badge ${cls}"><div class="badge-name">${name.toUpperCase()}</div><div class="badge-count">${data.on}/${data.total} ON TURF</div></div>`;
+  }).join('');
+}
+
+function buildTicker(assignments) {
+  const track = document.getElementById('ticker-track');
+  if (!assignments.length) { track.textContent = 'NO ACTIVE FIELD UNITS'; track.classList.remove('animate'); return; }
+  const items = assignments.map(a => {
+    const status = getStatus(a);
+    const name = (a.canvasser_name || 'UNKNOWN').toUpperCase();
+    const statusLabel = status==='on'?'ON TURF':status==='near'?'NEAR':status==='stale'?'STALE':'OFF TURF';
+    const cls = status==='on'?'tick-on':status==='near'?'tick-near':'tick-off';
+    return `<span class="gh-tick-item"><span class="${cls}">[${statusLabel}]</span> <span class="tick-addr">${name}</span> · ${(a.turf_name||'').toUpperCase()} · ${timeSince(a.last_ping_at)}</span>`;
+  });
+  track.innerHTML = [...items,...items].join('');
+  track.classList.add('animate');
+}
+
+document.getElementById('login-password').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+document.getElementById('login-email').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('login-password').focus(); });
+</script>
+</body>
+</html>
