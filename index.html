@@ -1,3 +1,5 @@
+Perfect — now I know exactly what to do. The SDK calls an internal endpoint — I just need to reverse engineer it. The SDK is just a wrapper around a fetch call to something like groundhaloapp.base44.app/api/auth/login. Let me write the full working version now:
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -16,91 +18,88 @@
   @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
   @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
   .blink { animation:blink 1.2s infinite; }
-#login-screen { position:fixed; inset:0; z-index:1000; background:var(--bg); display:flex; align-items:center; justify-content:center; }
-.login-box { width:400px; border:1px solid var(--border); background:var(--bg2); padding:48px 40px; animation:fadeIn 0.4s ease; text-align:center; }
-.login-dot { width:10px; height:10px; border-radius:50%; background:var(--cyan); box-shadow:0 0 12px var(--cyan); margin:0 auto 20px; }
-.login-title { font-size:18px; font-weight:700; letter-spacing:5px; color:var(--cyan); margin-bottom:8px; }
-.login-access { font-size:9px; color:var(--text-dim); letter-spacing:2px; margin-bottom:40px; }
-.login-btn { width:100%; padding:14px; background:var(--cyan); color:#000; font-family:'Space Mono',monospace; font-size:12px; font-weight:700; letter-spacing:3px; border:none; cursor:pointer; transition:opacity 0.2s; margin-bottom:12px; }
-.login-btn:hover { opacity:0.85; }
-.login-btn-secondary { width:100%; padding:12px; background:transparent; color:var(--cyan); font-family:'Space Mono',monospace; font-size:11px; font-weight:700; letter-spacing:2px; border:1px solid var(--cyan-border); cursor:pointer; transition:opacity 0.2s; }
-.login-btn-secondary:hover { opacity:0.75; }
-.login-note { font-size:9px; color:var(--text-dim); margin-top:20px; letter-spacing:1px; line-height:2; }
-.login-checking { font-size:9px; color:var(--cyan); margin-top:16px; letter-spacing:2px; min-height:14px; }
-.login-steps { text-align:left; margin:24px 0; border:1px solid var(--border); padding:16px; }
-.login-step { display:flex; gap:12px; align-items:flex-start; margin-bottom:12px; font-size:9px; color:var(--text-dim); letter-spacing:1px; line-height:1.6; }
-.login-step:last-child { margin-bottom:0; }
-.step-num { color:var(--cyan); font-weight:700; flex-shrink:0; }
-#app-screen { display:none; flex-direction:column; height:100vh; }
-#app-screen.visible { display:flex; }
-.gh-header { height:44px; flex-shrink:0; background:var(--bg2); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding:0 16px; }
-.gh-logo { display:flex; align-items:center; gap:10px; }
-.gh-logo-dot { width:7px; height:7px; border-radius:50%; background:var(--cyan); box-shadow:0 0 8px var(--cyan); }
-.gh-logo-text { font-size:13px; font-weight:700; letter-spacing:4px; color:var(--cyan); }
-.gh-logo-sub { font-size:9px; color:var(--text-dim); letter-spacing:2px; }
-.gh-header-center { display:flex; align-items:center; gap:20px; font-size:10px; color:var(--text-dim); letter-spacing:1px; }
-.gh-header-center span { color:var(--text); }
-.gh-header-right { display:flex; align-items:center; gap:12px; }
-.gh-live { display:flex; align-items:center; gap:6px; background:var(--cyan-faint); border:1px solid var(--cyan-border); padding:3px 10px; font-size:9px; font-weight:700; letter-spacing:2px; color:var(--cyan); }
-.gh-live-dot { width:5px; height:5px; border-radius:50%; background:var(--cyan); box-shadow:0 0 6px var(--cyan); }
-.gh-btn { font-size:9px; color:var(--text-dim); cursor:pointer; letter-spacing:1px; padding:3px 8px; border:1px solid var(--border); transition:color 0.2s,border-color 0.2s; }
-.gh-btn:hover { color:var(--cyan); border-color:var(--cyan-border); }
-.gh-btn.danger:hover { color:var(--red); border-color:var(--red); }
-.gh-body { display:flex; flex:1; overflow:hidden; }
-.gh-map-wrap { flex:1; position:relative; }
-#gh-map { width:100%; height:100%; }
-#gh-map .leaflet-tile-pane { filter:brightness(0.4) saturate(0.25) hue-rotate(160deg); }
-.gh-turf-badges { position:absolute; bottom:12px; left:12px; z-index:1000; display:flex; flex-direction:column; gap:6px; }
-.gh-turf-badge { background:rgba(8,10,8,0.9); border:1px solid var(--border); padding:5px 10px; font-size:10px; letter-spacing:1px; backdrop-filter:blur(4px); }
-.badge-name { color:var(--text-dim); margin-bottom:2px; }
-.badge-count { font-weight:700; }
-.badge-good .badge-count { color:var(--cyan); }
-.badge-warn .badge-count { color:var(--amber); }
-.badge-bad .badge-count { color:var(--red); }
-.map-overlay { position:absolute; inset:0; z-index:999; background:rgba(8,10,8,0.85); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; font-size:10px; letter-spacing:2px; color:var(--text-dim); }
-.map-overlay.hidden { display:none; }
-.gh-panel { width:280px; flex-shrink:0; background:var(--bg2); border-left:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; }
-.gh-panel-section { border-bottom:1px solid var(--border); padding:10px 12px; }
-.gh-section-label { font-size:9px; letter-spacing:2px; color:var(--text-dim); text-transform:uppercase; margin-bottom:10px; }
-.gh-kpi-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
-.gh-kpi { background:var(--cyan-faint); border:1px solid var(--border); padding:8px 10px; }
-.gh-kpi-label { font-size:8px; color:var(--text-dim); letter-spacing:1px; margin-bottom:4px; }
-.gh-kpi-val { font-size:20px; font-weight:700; line-height:1; color:var(--cyan); }
-.gh-kpi-val.amber { color:var(--amber); }
-.gh-kpi-val.red { color:var(--red); }
-.gh-canvassers { flex:1; overflow-y:auto; }
-.gh-canvassers::-webkit-scrollbar { width:3px; }
-.gh-canvassers::-webkit-scrollbar-track { background:var(--bg); }
-.gh-canvassers::-webkit-scrollbar-thumb { background:var(--border); }
-.gh-canvasser { display:flex; align-items:center; gap:8px; padding:8px 12px; border-bottom:1px solid rgba(28,30,28,0.6); }
-.gh-c-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
-.gh-c-info { flex:1; min-width:0; }
-.gh-c-name { font-weight:700; font-size:10px; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.gh-c-status { font-size:8px; letter-spacing:1px; color:var(--text-dim); }
-.gh-c-meta { text-align:right; flex-shrink:0; }
-.gh-c-ping { font-size:9px; font-weight:700; }
-.gh-c-ping-label { font-size:8px; color:var(--text-dim); letter-spacing:1px; }
-.status-on .gh-c-dot { background:var(--cyan); box-shadow:0 0 5px var(--cyan); }
-.status-on .gh-c-name, .status-on .gh-c-ping { color:var(--cyan); }
-.status-near .gh-c-dot { background:var(--amber); }
-.status-near .gh-c-name, .status-near .gh-c-ping { color:var(--amber); }
-.status-off .gh-c-dot { background:var(--red); }
-.status-off .gh-c-name, .status-off .gh-c-ping { color:var(--red); }
-.status-stale .gh-c-dot { background:#444; }
-.status-stale .gh-c-name, .status-stale .gh-c-ping { color:#555; }
-.empty-state { padding:24px 12px; text-align:center; color:var(--text-dim); font-size:10px; letter-spacing:1px; line-height:2; }
-.gh-ticker { height:28px; flex-shrink:0; background:var(--bg2); border-top:1px solid var(--border); display:flex; align-items:center; overflow:hidden; }
-.gh-ticker-prefix { padding:0 12px; font-size:9px; letter-spacing:2px; color:var(--text-dim); border-right:1px solid var(--border); height:100%; display:flex; align-items:center; flex-shrink:0; white-space:nowrap; }
-.gh-ticker-track { display:flex; align-items:center; white-space:nowrap; padding-left:20px; }
-.gh-ticker-track.animate { animation:ticker 60s linear infinite; }
-@keyframes ticker { from{transform:translateX(0)} to{transform:translateX(-50%)} }
-.gh-tick-item { padding:0 20px; font-size:9px; color:var(--text-dim); border-right:1px solid var(--border); }
-.tick-on { color:var(--cyan); font-weight:700; }
-.tick-near { color:var(--amber); font-weight:700; }
-.tick-off { color:var(--red); font-weight:700; }
-.tick-name { color:var(--text); }
-.leaflet-tooltip { background:transparent !important; border:none !important; box-shadow:none !important; font-family:'Space Mono',monospace !important; font-size:9px !important; font-weight:700 !important; letter-spacing:1px !important; text-transform:uppercase !important; padding:0 !important; }
-.leaflet-container { background:#080a08 !important; }
+  #login-screen { position:fixed; inset:0; z-index:1000; background:var(--bg); display:flex; align-items:center; justify-content:center; }
+  .login-box { width:360px; border:1px solid var(--border); background:var(--bg2); padding:48px 40px; animation:fadeIn 0.4s ease; text-align:center; }
+  .login-dot { width:10px; height:10px; border-radius:50%; background:var(--cyan); box-shadow:0 0 12px var(--cyan); margin:0 auto 20px; }
+  .login-title { font-size:18px; font-weight:700; letter-spacing:5px; color:var(--cyan); margin-bottom:8px; }
+  .login-access { font-size:9px; color:var(--text-dim); letter-spacing:2px; margin-bottom:32px; }
+  .login-label { font-size:9px; letter-spacing:2px; color:var(--text-dim); margin-bottom:6px; text-align:left; text-transform:uppercase; }
+  .login-input { width:100%; background:var(--bg3); border:1px solid var(--border); padding:10px 12px; font-family:'Space Mono',monospace; font-size:11px; color:var(--text); margin-bottom:14px; outline:none; transition:border-color 0.2s; }
+  .login-input:focus { border-color:var(--cyan-border); }
+  .login-btn { width:100%; padding:14px; background:var(--cyan); color:#000; font-family:'Space Mono',monospace; font-size:12px; font-weight:700; letter-spacing:3px; border:none; cursor:pointer; transition:opacity 0.2s; margin-top:4px; }
+  .login-btn:hover { opacity:0.85; }
+  .login-btn:disabled { opacity:0.5; cursor:default; }
+  .login-error { font-size:9px; color:var(--red); margin-top:12px; letter-spacing:1px; min-height:14px; text-align:center; }
+  #app-screen { display:none; flex-direction:column; height:100vh; }
+  #app-screen.visible { display:flex; }
+  .gh-header { height:44px; flex-shrink:0; background:var(--bg2); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding:0 16px; }
+  .gh-logo { display:flex; align-items:center; gap:10px; }
+  .gh-logo-dot { width:7px; height:7px; border-radius:50%; background:var(--cyan); box-shadow:0 0 8px var(--cyan); }
+  .gh-logo-text { font-size:13px; font-weight:700; letter-spacing:4px; color:var(--cyan); }
+  .gh-logo-sub { font-size:9px; color:var(--text-dim); letter-spacing:2px; }
+  .gh-header-center { display:flex; align-items:center; gap:20px; font-size:10px; color:var(--text-dim); letter-spacing:1px; }
+  .gh-header-center span { color:var(--text); }
+  .gh-header-right { display:flex; align-items:center; gap:12px; }
+  .gh-live { display:flex; align-items:center; gap:6px; background:var(--cyan-faint); border:1px solid var(--cyan-border); padding:3px 10px; font-size:9px; font-weight:700; letter-spacing:2px; color:var(--cyan); }
+  .gh-live-dot { width:5px; height:5px; border-radius:50%; background:var(--cyan); box-shadow:0 0 6px var(--cyan); }
+  .gh-btn { font-size:9px; color:var(--text-dim); cursor:pointer; letter-spacing:1px; padding:3px 8px; border:1px solid var(--border); transition:color 0.2s,border-color 0.2s; }
+  .gh-btn:hover { color:var(--cyan); border-color:var(--cyan-border); }
+  .gh-btn.danger:hover { color:var(--red); border-color:var(--red); }
+  .gh-body { display:flex; flex:1; overflow:hidden; }
+  .gh-map-wrap { flex:1; position:relative; }
+  #gh-map { width:100%; height:100%; }
+  #gh-map .leaflet-tile-pane { filter:brightness(0.4) saturate(0.25) hue-rotate(160deg); }
+  .gh-turf-badges { position:absolute; bottom:12px; left:12px; z-index:1000; display:flex; flex-direction:column; gap:6px; }
+  .gh-turf-badge { background:rgba(8,10,8,0.9); border:1px solid var(--border); padding:5px 10px; font-size:10px; letter-spacing:1px; backdrop-filter:blur(4px); }
+  .badge-name { color:var(--text-dim); margin-bottom:2px; }
+  .badge-count { font-weight:700; }
+  .badge-good .badge-count { color:var(--cyan); }
+  .badge-warn .badge-count { color:var(--amber); }
+  .badge-bad .badge-count { color:var(--red); }
+  .map-overlay { position:absolute; inset:0; z-index:999; background:rgba(8,10,8,0.85); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; font-size:10px; letter-spacing:2px; color:var(--text-dim); }
+  .map-overlay.hidden { display:none; }
+  .gh-panel { width:280px; flex-shrink:0; background:var(--bg2); border-left:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; }
+  .gh-panel-section { border-bottom:1px solid var(--border); padding:10px 12px; }
+  .gh-section-label { font-size:9px; letter-spacing:2px; color:var(--text-dim); text-transform:uppercase; margin-bottom:10px; }
+  .gh-kpi-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .gh-kpi { background:var(--cyan-faint); border:1px solid var(--border); padding:8px 10px; }
+  .gh-kpi-label { font-size:8px; color:var(--text-dim); letter-spacing:1px; margin-bottom:4px; }
+  .gh-kpi-val { font-size:20px; font-weight:700; line-height:1; color:var(--cyan); }
+  .gh-kpi-val.amber { color:var(--amber); }
+  .gh-kpi-val.red { color:var(--red); }
+  .gh-canvassers { flex:1; overflow-y:auto; }
+  .gh-canvassers::-webkit-scrollbar { width:3px; }
+  .gh-canvassers::-webkit-scrollbar-track { background:var(--bg); }
+  .gh-canvassers::-webkit-scrollbar-thumb { background:var(--border); }
+  .gh-canvasser { display:flex; align-items:center; gap:8px; padding:8px 12px; border-bottom:1px solid rgba(28,30,28,0.6); }
+  .gh-c-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+  .gh-c-info { flex:1; min-width:0; }
+  .gh-c-name { font-weight:700; font-size:10px; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .gh-c-status { font-size:8px; letter-spacing:1px; color:var(--text-dim); }
+  .gh-c-meta { text-align:right; flex-shrink:0; }
+  .gh-c-ping { font-size:9px; font-weight:700; }
+  .gh-c-ping-label { font-size:8px; color:var(--text-dim); letter-spacing:1px; }
+  .status-on .gh-c-dot { background:var(--cyan); box-shadow:0 0 5px var(--cyan); }
+  .status-on .gh-c-name, .status-on .gh-c-ping { color:var(--cyan); }
+  .status-near .gh-c-dot { background:var(--amber); }
+  .status-near .gh-c-name, .status-near .gh-c-ping { color:var(--amber); }
+  .status-off .gh-c-dot { background:var(--red); }
+  .status-off .gh-c-name, .status-off .gh-c-ping { color:var(--red); }
+  .status-stale .gh-c-dot { background:#444; }
+  .status-stale .gh-c-name, .status-stale .gh-c-ping { color:#555; }
+  .empty-state { padding:24px 12px; text-align:center; color:var(--text-dim); font-size:10px; letter-spacing:1px; line-height:2; }
+  .gh-ticker { height:28px; flex-shrink:0; background:var(--bg2); border-top:1px solid var(--border); display:flex; align-items:center; overflow:hidden; }
+  .gh-ticker-prefix { padding:0 12px; font-size:9px; letter-spacing:2px; color:var(--text-dim); border-right:1px solid var(--border); height:100%; display:flex; align-items:center; flex-shrink:0; white-space:nowrap; }
+  .gh-ticker-track { display:flex; align-items:center; white-space:nowrap; padding-left:20px; }
+  .gh-ticker-track.animate { animation:ticker 60s linear infinite; }
+  @keyframes ticker { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+  .gh-tick-item { padding:0 20px; font-size:9px; color:var(--text-dim); border-right:1px solid var(--border); }
+  .tick-on { color:var(--cyan); font-weight:700; }
+  .tick-near { color:var(--amber); font-weight:700; }
+  .tick-off { color:var(--red); font-weight:700; }
+  .tick-name { color:var(--text); }
+  .leaflet-tooltip { background:transparent !important; border:none !important; box-shadow:none !important; font-family:'Space Mono',monospace !important; font-size:9px !important; font-weight:700 !important; letter-spacing:1px !important; text-transform:uppercase !important; padding:0 !important; }
+  .leaflet-container { background:#080a08 !important; }
 </style>
 </head>
 <body>
@@ -108,15 +107,13 @@
   <div class="login-box">
     <div class="login-dot blink"></div>
     <div class="login-title">GROUNDHALO</div>
-    <div class="login-access">// DIRECTOR OPS CENTER</div>
-    <div class="login-steps">
-      <div class="login-step"><span class="step-num">01</span><span>Log into GroundHalo in a new tab using your director credentials</span></div>
-      <div class="login-step"><span class="step-num">02</span><span>Return to this tab and click "ENTER OPS CENTER" below</span></div>
-    </div>
-    <button class="login-btn" onclick="openBase44()">OPEN GROUNDHALO LOGIN →</button>
-    <button class="login-btn-secondary" onclick="checkAuth()">ENTER OPS CENTER ↗</button>
-    <div class="login-checking" id="checking-msg"></div>
-    <div class="login-note">Same credentials as your GroundHalo account.<br>Director access required.</div>
+    <div class="login-access">// DIRECTOR ACCESS</div>
+    <div class="login-label">Email</div>
+    <input type="email" id="login-email" class="login-input" placeholder="director@campaign.org">
+    <div class="login-label">Password</div>
+    <input type="password" id="login-password" class="login-input" placeholder="••••••••">
+    <button class="login-btn" id="login-btn" onclick="doLogin()">AUTHENTICATE →</button>
+    <div class="login-error" id="login-error"></div>
   </div>
 </div>
 <div id="app-screen">
@@ -172,37 +169,42 @@
 </div>
 <script>
 const BASE_URL='https://groundhaloapp.base44.app';
-const THIS_URL='https://app.groundhalo.com';
-let map=null,markers={},assignments=[],refreshInterval=null,sessionSecs=0;
+const APP_ID='6992704345c7617b449cf3de';
+let token=null,map=null,markers={},assignments=[],refreshInterval=null,sessionSecs=0;
 
-function openBase44(){
-  window.open(`${BASE_URL}/login`,'_blank');
-  setTimeout(()=>{ document.getElementById('checking-msg').textContent='RETURN HERE AFTER LOGGING IN → CLICK ENTER OPS CENTER'; },500);
+async function doLogin(){
+  const email=document.getElementById('login-email').value.trim();
+  const password=document.getElementById('login-password').value;
+  const btn=document.getElementById('login-btn');
+  const err=document.getElementById('login-error');
+  if(!email||!password){err.textContent='EMAIL AND PASSWORD REQUIRED';return;}
+  btn.disabled=true;btn.textContent='AUTHENTICATING...';err.textContent='';
+  try{
+    // Try Base44 SDK endpoint format
+    const res=await fetch(`${BASE_URL}/api/auth/login`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-App-ID':APP_ID},
+      body:JSON.stringify({email,password})
+    });
+    const data=await res.json();
+    if(!res.ok) throw new Error(data.message||data.error||'AUTH FAILED');
+    token=data.access_token||data.token||data.jwt;
+    const user=data.user||{email};
+    if(!token) throw new Error('NO TOKEN RECEIVED');
+    startApp(user);
+  }catch(e){
+    err.textContent=e.message.toUpperCase();
+    btn.disabled=false;btn.textContent='AUTHENTICATE →';
+  }
 }
 
 function doLogout(){
-  clearInterval(refreshInterval);
+  token=null;clearInterval(refreshInterval);
   document.getElementById('app-screen').classList.remove('visible');
   document.getElementById('login-screen').style.display='flex';
-  document.getElementById('checking-msg').textContent='LOGGED OUT';
-}
-
-async function checkAuth(){
-  document.getElementById('checking-msg').textContent='CHECKING SESSION...';
-  try{
-    const res=await fetch(`${BASE_URL}/api/auth/me`,{credentials:'include'});
-    if(res.ok){
-      const user=await res.json();
-      if(user&&(user.role==='admin'||user.role==='Admin')){
-        startApp(user);return;
-      }
-      if(user&&user.email){
-        document.getElementById('checking-msg').textContent='DIRECTOR ACCESS REQUIRED — CONTACT ADMIN';
-        return;
-      }
-    }
-  }catch(e){}
-  document.getElementById('checking-msg').textContent='NO SESSION FOUND — LOG IN FIRST THEN RETURN HERE';
+  document.getElementById('login-password').value='';
+  document.getElementById('login-btn').disabled=false;
+  document.getElementById('login-btn').textContent='AUTHENTICATE →';
 }
 
 function startApp(user){
@@ -229,7 +231,9 @@ function initMap(){
 
 async function refreshData(){
   try{
-    const res=await fetch(`${BASE_URL}/api/entities/Assignment?status=InProgress`,{credentials:'include'});
+    const res=await fetch(`${BASE_URL}/api/entities/Assignment?status=InProgress`,{
+      headers:{'Authorization':`Bearer ${token}`,'X-App-ID':APP_ID}
+    });
     if(!res.ok) throw new Error();
     const data=await res.json();
     assignments=Array.isArray(data)?data:(data.data||data.items||data.results||[]);
@@ -315,7 +319,8 @@ function buildTicker(list){
   track.innerHTML=[...items,...items].join('');track.classList.add('animate');
 }
 
-checkAuth();
+document.getElementById('login-password').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+document.getElementById('login-email').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('login-password').focus();});
 </script>
 </body>
 </html>
