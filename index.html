@@ -1,4 +1,4 @@
-Here you go — only change is the SDK URL:
+Here you go — only difference from the last one is the import line:
 
 <!DOCTYPE html>
 <html lang="en">
@@ -168,7 +168,7 @@ Here you go — only change is the SDK URL:
   </div>
 </div>
 <script type="module">
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@base44/sdk/dist/index.mjs';
+import { createClient } from 'https://esm.sh/@base44/sdk';
 
 const base44 = createClient({ appId: '6992704345c7617b449cf3de' });
 let map=null, markers={}, assignments=[], refreshInterval=null, sessionSecs=0;
