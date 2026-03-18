@@ -1,3 +1,5 @@
+Here you go — only change is the SDK URL:
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -166,7 +168,7 @@
   </div>
 </div>
 <script type="module">
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@base44/sdk@0.8.20/dist/index.mjs';
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@base44/sdk/dist/index.mjs';
 
 const base44 = createClient({ appId: '6992704345c7617b449cf3de' });
 let map=null, markers={}, assignments=[], refreshInterval=null, sessionSecs=0;
@@ -206,7 +208,6 @@ const startApp = (user) => {
   updateClock();
 };
 
-// Login
 document.getElementById('login-btn').addEventListener('click', async () => {
   const email = document.getElementById('login-email').value.trim();
   const password = document.getElementById('login-password').value;
@@ -225,7 +226,6 @@ document.getElementById('login-btn').addEventListener('click', async () => {
   }
 });
 
-// Refresh + Logout
 document.getElementById('refresh-btn').addEventListener('click', refreshData);
 document.getElementById('logout-btn').addEventListener('click', () => {
   clearInterval(refreshInterval);
@@ -236,7 +236,6 @@ document.getElementById('logout-btn').addEventListener('click', () => {
   document.getElementById('login-btn').textContent='AUTHENTICATE →';
 });
 
-// Enter key
 document.getElementById('login-password').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('login-btn').click(); });
 document.getElementById('login-email').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('login-password').focus(); });
 
